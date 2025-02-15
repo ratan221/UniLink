@@ -20,7 +20,8 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mailtrap": "^3.4.0",
-    "mogoose": "^0.0.1-security"
+    "mogoose": "^0.0.1-security",
+    "mongoose": "^8.10.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

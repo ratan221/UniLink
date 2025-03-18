@@ -5,18 +5,31 @@ import { Bell, Home, LogOut, User, Users } from "lucide-react";
 import logo from '../../assets/logo.png';
 
 const Navbar = () => {
-	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+	const { data: authUser } = useQuery({
+		queryKey: ["authUser"],
+		queryFn: async () => {
+			const res = await axiosInstance.get("/auth/me");
+			return res.data;
+		},
+	});
+
 	const queryClient = useQueryClient();
 
 	const { data: notifications } = useQuery({
 		queryKey: ["notifications"],
-		queryFn: async () => axiosInstance.get("/notifications"),
+		queryFn: async () => {
+			const res = await axiosInstance.get("/notifications");
+			return res.data;
+		},
 		enabled: !!authUser,
 	});
 
 	const { data: connectionRequests } = useQuery({
 		queryKey: ["connectionRequests"],
-		queryFn: async () => axiosInstance.get("/connections/requests"),
+		queryFn: async () => {
+			const res = await axiosInstance.get("/connections/requests");
+			return res.data;
+		},
 		enabled: !!authUser,
 	});
 
@@ -27,8 +40,8 @@ const Navbar = () => {
 		},
 	});
 
-	const unreadNotificationCount = notifications?.data.filter((notif) => !notif.read).length;
-	const unreadConnectionRequestsCount = connectionRequests?.data?.length;
+	const unreadNotificationCount = notifications?.data?.filter((notif) => !notif.read).length || 0;
+	const unreadConnectionRequestsCount = connectionRequests?.data?.length || 0;
 
 	return (
 		<nav className='bg-white text-gray-900 shadow-md sticky top-0 z-10'>

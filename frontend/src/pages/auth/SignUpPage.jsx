@@ -24,7 +24,7 @@ const SignUpPage = () => {
 						<div className="relative flex items-center">
 							<div className="w-full border-t border-gray-300"></div>
 							<span className="px-4 bg-white text-sm text-gray-500 absolute left-1/2 transform -translate-x-1/2">
-								Already on LinkedIn?
+								Already on UniLink?
 							</span>
 						</div>
 						<div className="mt-6">

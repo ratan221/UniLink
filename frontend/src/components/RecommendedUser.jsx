@@ -45,10 +45,16 @@ const RecommendedUser = ({ user }) => {
         },
     });
 
+    const handleConnect = () => {
+        if (connectionStatus?.data?.status === "not_connected") {
+            sendConnectionRequest(user._id);
+        }
+    };
+
     const renderButton = () => {
         if (isLoading) {
             return (
-                <button className='px-4 py-2 rounded-md bg-gray-100 text-gray-500 text-sm font-medium' disabled>
+                <button className="px-4 py-2 rounded-md bg-gray-100 text-gray-500 text-sm font-medium" disabled>
                     Loading...
                 </button>
             );
@@ -57,24 +63,27 @@ const RecommendedUser = ({ user }) => {
         switch (connectionStatus?.data?.status) {
             case "pending":
                 return (
-                    <button className='px-4 py-2 rounded-md bg-amber-50 text-amber-600 text-sm font-medium flex items-center' disabled>
-                        <Clock size={16} className='mr-2' />
+                    <button
+                        className="px-4 py-2 rounded-md bg-amber-50 text-amber-600 text-sm font-medium flex items-center"
+                        disabled
+                    >
+                        <Clock size={16} className="mr-2" />
                         Pending
                     </button>
                 );
             case "received":
                 return (
-                    <div className='flex gap-2'>
+                    <div className="flex gap-2 ">
                         <button
                             onClick={() => acceptRequest(connectionStatus.data.requestId)}
-                            className='px-3 py-2 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors duration-200'
+                            className="px-3 py-2 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition duration-200"
                             title="Accept Request"
                         >
                             <Check size={16} />
                         </button>
                         <button
                             onClick={() => rejectRequest(connectionStatus.data.requestId)}
-                            className='px-3 py-2 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors duration-200'
+                            className="px-3 py-2 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition duration-200"
                             title="Reject Request"
                         >
                             <X size={16} />
@@ -83,47 +92,60 @@ const RecommendedUser = ({ user }) => {
                 );
             case "connected":
                 return (
-                    <button className='px-4 py-2 rounded-md bg-emerald-50 text-emerald-600 text-sm font-medium flex items-center' disabled>
-                        <UserCheck size={16} className='mr-2' />
+                    <button
+                        className="px-4 py-2 rounded-md bg-emerald-50 text-emerald-600 text-sm font-medium flex items-center"
+                        disabled
+                    >
+                        <UserCheck size={16} className="mr-2" />
                         Connected
                     </button>
                 );
             default:
                 return (
                     <button
-                        className='px-4 py-2 rounded-md border border-blue-500 text-blue-600 hover:bg-blue-50 transition-colors duration-200 text-sm font-medium flex items-center'
+                        className="px-4 py-2 rounded-md border border-blue-500 text-blue-600 hover:bg-blue-50 transition duration-200 text-sm font-medium flex items-center"
                         onClick={handleConnect}
                     >
-                        <UserPlus size={16} className='mr-2' />
+                        <UserPlus size={16} className="mr-2" />
                         Connect
                     </button>
                 );
         }
     };
 
-    const handleConnect = () => {
-        if (connectionStatus?.data?.status === "not_connected") {
-            sendConnectionRequest(user._id);
-        }
-    };
-
     return (
-        <div className='flex items-center justify-between p-4 hover:bg-gray-50 transition-colors duration-200 rounded-lg'>
-            <Link to={`/profile/${user.username}`} className='flex items-center flex-grow group'>
-                <img
-                    src={user.profilePicture || "/avatar.png"}
-                    alt={user.name}
-                    className='w-12 h-12 rounded-full object-cover border border-gray-200'
-                />
-                <div className='ml-4'>
-                    <h3 className='font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200'>
-                        {user.name}
-                    </h3>
-                    <p className='text-sm text-gray-500'>{user.headline}</p>
-                </div>
-            </Link>
-            <div className='ml-4'>{renderButton()}</div>
+    //     <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 w-full max-w-md">
+    //     <Link to={`/profile/${user.username}`} className="flex items-center flex-grow space-x-4 min-w-0">
+    //         <img
+    //             src={user.profilePicture || "/avatar.png"}
+    //             alt={user.name}
+    //             className="w-12 h-12 rounded-full object-cover border border-gray-200"
+    //         />
+    //         <div className="flex-1 min-w-0">
+    //             <h3 className="font-semibold text-gray-900 truncate">
+    //                 {user.name}
+    //             </h3>
+    //             <p className="text-sm text-gray-500 truncate">{user.headline}</p>
+    //         </div>
+    //     </Link>
+    //     <div className="flex-shrink-0 ml-2">{renderButton()}</div>
+    // </div>
+    <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 w-full max-w-2xl">
+    <Link to={`/profile/${user.username}`} className="flex items-center flex-grow space-x-4 min-w-0">
+        <img
+            src={user.profilePicture || "/avatar.png"}
+            alt={user.name}
+            className="w-12 h-12 rounded-full object-cover border border-gray-200"
+        />
+        <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 ">
+                {user.name}
+            </h3>
+            <p className="text-sm text-gray-500 ">{user.headline}</p>
         </div>
+    </Link>
+    <div className="flex-shrink-0 ml-2">{renderButton()}</div>
+</div>
     );
 };
 

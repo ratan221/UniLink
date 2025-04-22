@@ -1,24 +1,44 @@
-import jwt from "jsonwebtoken";
-import User from "../models/User.model.js";
+import { verifyJWTToken } from "../services/common_utils.js";
+import User from "../models/user.model.js";
 
-export const protectRoute = async (req, res, next) => {
-    try {
-        const token = req.cookies["jwt-UniLink"];
-        if (!token) {
-            return res.status(401).json({ message: "Not authorized, no token" });
-        }
+export const protectRoute = async (req, res, next, roles = []) => {
+  try {
+    const authHeader = req.headers.authorization;
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId).select("-password");
-
-        if (!user) {
-            return res.status(401).json({ message: "User not found" });
-        }
-
-        req.user = user;
-        next();
-    } catch (error) {
-        console.error("Error in protectRoute middleware:", error);
-        return res.status(401).json({ message: "Invalid token" });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new UnauthorizedError("No token provided or invalid token format");
     }
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - No Token Provided" });
+    }
+
+    const decoded = verifyJWTToken(token);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized - Invalid Token" });
+    }
+
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    req.user = user;
+
+    if (roles.length > 0 && !roles.includes(user.role)) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden - Insufficient permissions" });
+    }
+
+    next();
+  } catch (error) {
+    console.log("Error in protectRoute middleware:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };

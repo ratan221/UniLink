@@ -1,54 +1,69 @@
 import { useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { axiosInstance } from "../lib/axios";
-
 import ProfileHeader from "../components/ProfileHeader";
 import AboutSection from "../components/AboutSection";
 import ExperienceSection from "../components/ExperienceSection";
 import EducationSection from "../components/EducationSection";
 import SkillsSection from "../components/SkillsSection";
+import { useEffect, useState } from "react";
+import Certification from "../components/Certificate";
+import { fireApi } from "../utils/useFire";
 import toast from "react-hot-toast";
 
 const ProfilePage = () => {
-	const { username } = useParams();
-	const queryClient = useQueryClient();
+  const [user, setUser] = useState([]);
+  const { username } = useParams();
+  const isOwnProfile = user?.username === username;
 
-	const { data: authUser, isLoading } = useQuery({
-		queryKey: ["authUser"],
-	});
+  const GetUserProfile = async (username) => {
+    try {
+      const response = await fireApi(`/${username}`, "GET");
+      console.log("User Profile Response:", response);
+      setUser(response);
+    } catch (error) {
+      console.error("Error in GetUserProfile:", error);
+      toast.error(error.message || "Something went wrong!");
+    }
+  };
 
-	const { data: userProfile, isLoading: isUserProfileLoading } = useQuery({
-		queryKey: ["userProfile", username],
-		queryFn: () => axiosInstance.get(`/users/${username}`),
-	});
+  useEffect(() => {
+    console.log("User in ProfilePage:", username);
+    GetUserProfile(username);
+  }, [username]);
 
-	const { mutate: updateProfile } = useMutation({
-		mutationFn: async (updatedData) => {
-			await axiosInstance.put("/users/profile", updatedData);
-		},
-		onSuccess: () => {
-			toast.success("Profile updated successfully");
-			queryClient.invalidateQueries(["userProfile", username]);
-		},
-	});
-
-	if (isLoading || isUserProfileLoading) return null;
-
-	const isOwnProfile = authUser.username === userProfile.data.username;
-	const userData = isOwnProfile ? authUser : userProfile.data;
-
-	const handleSave = (updatedData) => {
-		updateProfile(updatedData);
-	};
-
-	return (
-		<div className='max-w-4xl mx-auto p-4'>
-			<ProfileHeader userData={userData} isOwnProfile={isOwnProfile} onSave={handleSave} />
-			<AboutSection userData={userData} isOwnProfile={isOwnProfile} onSave={handleSave} />
-			<ExperienceSection userData={userData} isOwnProfile={isOwnProfile} onSave={handleSave} />
-			<EducationSection userData={userData} isOwnProfile={isOwnProfile} onSave={handleSave} />
-			<SkillsSection userData={userData} isOwnProfile={isOwnProfile} onSave={handleSave} />
-		</div>
-	);
+  return (
+    <div className="max-w-4xl mx-auto p-4">
+      <ProfileHeader
+        userData={user}
+        GetUserProfile={GetUserProfile}
+        isOwnProfile={isOwnProfile}
+      />
+      <AboutSection
+        userData={user}
+        GetUserProfile={GetUserProfile}
+        isOwnProfile={isOwnProfile}
+      />
+      <ExperienceSection
+        userData={user}
+        GetUserProfile={GetUserProfile}
+        isOwnProfile={isOwnProfile}
+      />
+      <EducationSection
+        userData={user}
+        GetUserProfile={GetUserProfile}
+        isOwnProfile={isOwnProfile}
+      />
+      <SkillsSection
+        userData={user}
+        GetUserProfile={GetUserProfile}
+        isOwnProfile={isOwnProfile}
+      />
+        <Certification
+          userData={user}
+          GetUserProfile={GetUserProfile}
+          isOwnProfile={isOwnProfile}
+        />
+    </div>
+  );
 };
+
 export default ProfilePage;

@@ -1,15 +1,27 @@
 import express from "express";
-import { login, logout, signup, getCurrentUser } from "../controllers/auth.controller.js";
+import {
+  login,
+  logout,
+  signup,
+  getCurrentUser,
+} from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
+import multer from "multer";
+const upload = multer();
 
 const router = express.Router();
 
-
-router.post("/signup", signup);
-router.post("/login", login);
+router.post("/register", upload.none(), signup);
+router.post("/login", upload.none(), login);
 router.post("/logout", logout);
 
+router.get(
+  "/me",
 
-router.get("/me", protectRoute, getCurrentUser);
+  (req, res, next) => {
+    protectRoute(req, res, next, ["user", "admin"]);
+  },
+  getCurrentUser
+);
 
 export default router;

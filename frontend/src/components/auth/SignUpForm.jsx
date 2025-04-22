@@ -1,82 +1,89 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { axiosInstance } from "../../lib/axios.js";
 import { toast } from "react-hot-toast";
 import { Loader } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // Import navigate
+import { fireApi } from "../../utils/useFire";
+import { useNavigate } from "react-router-dom"; // Changed from Navigate to useNavigate
 
 const SignUpForm = () => {
-	const [name, setName] = useState("");
-	const [email, setEmail] = useState("");
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Initialize the navigate function
 
-	const queryClient = useQueryClient();
-	const navigate = useNavigate(); // Initialize navigate
-	const { mutate: signUpMutation, isLoading } = useMutation({
-		mutationFn: async (data) => {
-			const res = await axiosInstance.post("/auth/signup", data);
-			return res.data;
-		},
-		onSuccess: () => {
-			toast.success("Account created successfully");
-			queryClient.invalidateQueries({ queryKey: ["authUser"] });
-			navigate("/login");
-		},
-		onError: (err) => {
-			toast.error(err.response?.data?.message || "Something went wrong");
-		},
-	});
+  const validateSRMAPEmail = (email) => {
+    return email.toLowerCase().endsWith('@srmap.edu.in');
+  };
 
-	const handleSignUp = (e) => {
-		e.preventDefault();
-		signUpMutation({ name, username, email, password });
-	};
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Validate email domain
+    if (!validateSRMAPEmail(data.email)) {
+      toast.error('Please use your SRMAP email address (@srmap.edu.in)');
+      return;
+    }
 
-	return (
-		<form onSubmit={handleSignUp} className="flex flex-col gap-4">
-			<input
-				type="text"
-				placeholder="Full name"
-				value={name}
-				onChange={(e) => setName(e.target.value)}
-				className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-100  text-black"
-				required
-			/>
-			<input
-				type="text"
-				placeholder="Username"
-				value={username}
-				onChange={(e) => setUsername(e.target.value)}
-				className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-100  text-black"
-				required
-			/>
-			<input
-				type="email"
-				placeholder="Email"
-				value={email}
-				onChange={(e) => setEmail(e.target.value)}
-				className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-100  text-black"
-				required
-			/>
-			<input
-				type="password"
-				placeholder="Password (6+ characters)"
-				value={password}
-				onChange={(e) => setPassword(e.target.value)}
-				className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-100 text-black "
-				required
-			/>
+    setIsLoading(true);
+    try {
+      const response = await fireApi("/register", "POST", data);
+      toast.success(response.message);
+      e.target.reset();
+      navigate("/login");
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-			<button
-				type="submit"
-				disabled={isLoading}
-				className="w-full flex justify-center items-center gap-2 py-2 px-4 text-white bg-blue-600 rounded-md font-medium transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-			>
-				{isLoading ? <Loader className="size-5 animate-spin" /> : "Agree & Join"}
-			</button>
-		</form>
-	);
+  return (
+    <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+      <input
+        type="text"
+        name="name"
+        placeholder="Full name"
+        className="input input-bordered w-full"
+        required
+      />
+      <input
+        type="text"
+        name="username"
+        placeholder="Username"
+        className="input input-bordered w-full"
+        required
+      />
+      <input
+        type="email"
+        placeholder="SRMAP Email"
+        name="email"
+        pattern="[a-zA-Z0-9._%+-]+@srmap\.edu\.in$"
+        title="Please use your SRMAP email address (@srmap.edu.in)"
+        className="input input-bordered w-full"
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password (6+ characters)"
+        name="password"
+        className="input input-bordered w-full"
+        required
+      />
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="btn btn-primary w-full text-white"
+      >
+        {isLoading ? (
+          <Loader className="size-5 animate-spin" />
+        ) : (
+          "Agree & Join"
+        )}
+      </button>
+    </form>
+  );
 };
 
 export default SignUpForm;

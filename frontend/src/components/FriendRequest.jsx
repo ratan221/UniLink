@@ -1,32 +1,33 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
+import { fireApi } from "../utils/useFire";
 
-const FriendRequest = ({ request }) => {
-	const queryClient = useQueryClient();
+const FriendRequest = ({ request, getConnetionRequests, getSugestion }) => {
 
-	const { mutate: acceptConnectionRequest } = useMutation({
-		mutationFn: (requestId) => axiosInstance.put(`/connections/accept/${requestId}`),
-		onSuccess: () => {
-			toast.success("Connection request accepted");
-			queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
-		},
-		onError: (error) => {
-			toast.error(error.response.data.error);
-		},
-	});
+	const acceptConnectionRequest = async (requestId) => {
+		try {
+			const response = await fireApi(`/connections/accept/${requestId}`, 'PUT');
+			toast.success(response.message || 'Connection request accepted successfully');
+			getConnetionRequests();
+			getSugestion();
+		} catch (error) {
+			console.error('Error in acceptConnectionRequest:', error);
+			toast.error(error.message || 'Something went wrong!');
+		}
+	};
 
-	const { mutate: rejectConnectionRequest } = useMutation({
-		mutationFn: (requestId) => axiosInstance.put(`/connections/reject/${requestId}`),
-		onSuccess: () => {
-			toast.success("Connection request rejected");
-			queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
-		},
-		onError: (error) => {
-			toast.error(error.response.data.error);
-		},
-	});
+	const rejectConnectionRequest = async (requestId) => {
+		try {
+			const response = await fireApi(`/connections/reject/${requestId}`, 'PUT');
+			toast.success(response.message || 'Connection request rejected successfully');
+			getConnetionRequests();
+			getSugestion();
+		} catch (error) {
+			console.error('Error in rejectConnectionRequest:', error);
+			toast.error(error.message || 'Something went wrong!');
+			
+		}
+	};
 
 	return (
 		<div className='bg-white rounded-lg shadow p-4 flex items-center justify-between transition-all hover:shadow-md'>

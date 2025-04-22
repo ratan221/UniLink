@@ -41,7 +41,6 @@ export const deleteNotification = async (req, res) => {
 
 		res.json({ message: "Notification deleted successfully" });
 	} catch (error) {
-        console.error("Error in deleteNotification controller:", error);
 		res.status(500).json({ message: "Server error" });
 	}
 };

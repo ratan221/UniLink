@@ -1,111 +1,210 @@
-import { School, X, Pencil } from "lucide-react";
-import { useState } from "react";
+import { School } from "lucide-react";
+import { useContext, useEffect, useState } from "react";
+import { fireApi } from "../utils/useFire";
+import toast from "react-hot-toast";
+import ProfileContext from "../context/profileContext";
+import { useParams } from "react-router-dom";
 
-const EducationSection = ({ userData, isOwnProfile, onSave }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [educations, setEducations] = useState(userData.education || []);
-  const [newEducation, setNewEducation] = useState({
+const EducationSection = ({ userData, GetUserProfile }) => {
+  const { user } = useContext(ProfileContext);
+  const isOwnProfile = user?.username === userData?.username;
+  const { username } = useParams();
+  const [isAdding, setIsAdding] = useState(false);
+  const [educations, setEducations] = useState([]);
+  const [formData, setFormData] = useState({
     school: "",
     fieldOfStudy: "",
     startYear: "",
     endYear: "",
   });
+  const [editingId, setEditingId] = useState(null);
 
-  const handleAddOrSave = () => {
-    let updatedEducations = [...educations];
-
-    if (newEducation.school && newEducation.fieldOfStudy && newEducation.startYear) {
-      updatedEducations = [...updatedEducations, newEducation];
-      setNewEducation({ school: "", fieldOfStudy: "", startYear: "", endYear: "" });
+  useEffect(() => {
+    if (userData?.education) {
+      setEducations(userData.education);
     }
+  }, [userData]);
 
-    setEducations(updatedEducations);
-    onSave({ education: updatedEducations });
-    setIsEditing(false);
+  const resetForm = () => {
+    setFormData({
+      school: "",
+      fieldOfStudy: "",
+      startYear: "",
+      endYear: "",
+    });
   };
 
-  const handleDeleteEducation = (id) => {
-    const updatedEducations = educations.filter((edu) => edu._id !== id);
-    setEducations(updatedEducations);
-    onSave({ education: updatedEducations });
+  const handleAddEducation = async () => {
+    try {
+      const res = await fireApi("/add-education", "POST", formData);
+      toast.success(res?.message || "Education added successfully");
+      setIsAdding(false);
+      resetForm();
+      GetUserProfile(username);
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message || "Failed to add education");
+    }
+  };
+
+  const handleUpdateEducation = async () => {
+    try {
+      const res = await fireApi("/update-education", "PUT", {
+        eduId: editingId,
+        ...formData,
+      });
+      toast.success(res?.message || "Education updated successfully");
+      setEditingId(null);
+      resetForm();
+      GetUserProfile(username);
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message || "Failed to update education");
+    }
+  };
+
+  // const handleDeleteEducation = async (id) => {
+  //   try {
+  //     const res = await fireApi(`/delete-education/${id}`, "DELETE");
+  //     toast.success(res?.message || "Education deleted successfully");
+  //     GetUserProfile();
+  //   } catch (error) {
+  //     console.log(error);
+  //     toast.error(error.message || "Failed to delete education");
+  //   }
+  // };
+
+  const handleEditEducation = (edu) => {
+    setEditingId(edu._id);
+    setFormData({
+      school: edu.school,
+      fieldOfStudy: edu.fieldOfStudy,
+      startYear: edu.startYear,
+      endYear: edu.endYear || "",
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setIsAdding(false);
+    resetForm();
   };
 
   return (
-    <div className="bg-white shadow-md rounded-2xl p-6 mb-6 border border-gray-200">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex justify-between items-center">
-        Education
-        {isOwnProfile && !isEditing && (
-          <button onClick={() => setIsEditing(true)} className="text-gray-500 hover:text-blue-600 transition">
-            <Pencil size={22} />
+    <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <h2 className="text-xl font-semibold mb-4">Education</h2>
+
+      {educations.length === 0 && !isAdding && !editingId && isOwnProfile && (
+        <div className="text-start py-4">
+          <p className="text-gray-500 mb-4">No education added yet</p>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300"
+          >
+            Add Education
           </button>
-        )}
-      </h2>
+        </div>
+      )}
 
       {educations.map((edu) => (
-        <div key={edu._id} className="mb-4 p-4 border border-gray-200 rounded-xl flex justify-between items-start shadow-sm">
+        <div key={edu._id} className="mb-4 flex justify-between items-start">
           <div className="flex items-start">
-            <School size={24} className="mr-3 text-gray-600" />
+            <School size={20} className="mr-2 mt-1" />
             <div>
-              <h3 className="font-semibold text-lg text-gray-900">{edu.fieldOfStudy}</h3>
-              <p className="text-gray-700">{edu.school}</p>
+              <h3 className="font-semibold">{edu.fieldOfStudy}</h3>
+              <p className="text-gray-600">{edu.school}</p>
               <p className="text-gray-500 text-sm">
                 {edu.startYear} - {edu.endYear || "Present"}
               </p>
             </div>
           </div>
-          {isEditing && (
-            <button onClick={() => handleDeleteEducation(edu._id)} className="text-red-500 hover:text-red-700 transition">
-              <X size={20} />
-            </button>
+          {isOwnProfile && !editingId && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEditEducation(edu)}
+                className="text-primary hover:text-primary-dark"
+              >
+                Edit Education
+              </button>
+              {/* <button 
+                onClick={() => handleDeleteEducation(edu._id)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <X size={20} />
+              </button> */}
+            </div>
           )}
         </div>
       ))}
 
-      {isEditing && (
-        <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-xl shadow-sm">
+      {(isAdding || editingId) && (
+        <div className="mt-4 border-t pt-4">
+          <h3 className="font-semibold mb-2">
+            {editingId ? "Edit Education" : "Add New Education"}
+          </h3>
           <input
             type="text"
-            placeholder="School"
-            value={newEducation.school}
-            onChange={(e) => setNewEducation({ ...newEducation, school: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white outline-none transition"
+            placeholder="School*"
+            value={formData.school}
+            onChange={(e) =>
+              setFormData({ ...formData, school: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
+            required
           />
           <input
             type="text"
-            placeholder="Field of Study"
-            value={newEducation.fieldOfStudy}
-            onChange={(e) => setNewEducation({ ...newEducation, fieldOfStudy: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white outline-none transition"
+            placeholder="Field of Study*"
+            value={formData.fieldOfStudy}
+            onChange={(e) =>
+              setFormData({ ...formData, fieldOfStudy: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
+            required
           />
           <input
             type="number"
-            placeholder="Start Year"
-            value={newEducation.startYear}
-            onChange={(e) => setNewEducation({ ...newEducation, startYear: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent  bg-white outline-none transition"
+            placeholder="Start Year*"
+            value={formData.startYear}
+            onChange={(e) =>
+              setFormData({ ...formData, startYear: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
+            required
           />
           <input
             type="number"
-            placeholder="End Year (optional)"
-            value={newEducation.endYear}
-            onChange={(e) => setNewEducation({ ...newEducation, endYear: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-whi bg-white outline-none transition"
+            placeholder="End Year (leave blank if current)"
+            value={formData.endYear}
+            onChange={(e) =>
+              setFormData({ ...formData, endYear: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
           />
+          <div className="flex gap-2">
+            <button
+              onClick={editingId ? handleUpdateEducation : handleAddEducation}
+              className="bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300"
+            >
+              {editingId ? "Update Education" : "Add Education"}
+            </button>
+            <button
+              onClick={handleCancel}
+              className="bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 transition duration-300"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
-      {isEditing && (
-        <div className="flex justify-end gap-3 mt-4">
-          <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
-            Cancel
-          </button>
-          <button
-            onClick={handleAddOrSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
-          >
-            {newEducation.school || newEducation.fieldOfStudy || newEducation.startYear ? "Add Education" : "Save Changes"}
-          </button>
-        </div>
+      {isOwnProfile && educations.length > 0 && !isAdding && !editingId && (
+        <button
+          onClick={() => setIsAdding(true)}
+          className="mt-4 bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300"
+        >
+          Add New Education
+        </button>
       )}
     </div>
   );

@@ -1,13 +1,19 @@
 import mongoose from "mongoose";
+import { createSuperAdmin } from "../services/common_utils.js";
 
-const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI); // No extra options needed for MongoDB v4+
-        console.log("✅ Successfully connected to MongoDB");
-    } catch (error) {
-        console.error("❌ Error connecting to MongoDB:", error.message);
-        process.exit(1);
-    }
+export const connectDB = async () => {
+  try {
+    await mongoose.connect(
+      process.env.MONGODB_URL || "mongodb://localhost:27017/LinkedIn-Clone"
+    );
+
+    console.log("✅ DB connection successful");
+    await createSuperAdmin();
+
+    mongoose.connection.on("close", () => {
+      console.log("⚠ DB connection CLOSED");
+    });
+  } catch (error) {
+    console.error("❌ ERROR IN CONNECTING DB:", error);
+  }
 };
-
-export { connectDB };

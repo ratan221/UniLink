@@ -1,152 +1,119 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { Check, Clock, UserCheck, UserPlus, X } from "lucide-react";
+import React from "react";
+import { fireApi } from "../utils/useFire";
 
-const RecommendedUser = ({ user }) => {
-    const queryClient = useQueryClient();
+const RecommendedUser = ({ user, getSugestion }) => {
+  const [isConnected, setIsConnected] = React.useState(user.status);
+  
+  const HandleConnect = async () => {
+    try {
+      if (isConnected === "not_connected") {
+        const response = await fireApi(
+          `/connections/request/${user._id}`,
+          "POST"
+        );
+        toast.success(response.message || "Connection request sent");
+        getSugestion();
+      } else if (isConnected === "received") {
+        // This will now be handled by HandleAccept
+        return;
+      }
+    } catch (error) {
+      console.error("Error in handleConnect:", error);
+      toast.error(error.message || "Failed to connect");
+    }
+  };
 
-    const { data: connectionStatus, isLoading } = useQuery({
-        queryKey: ["connectionStatus", user._id],
-        queryFn: () => axiosInstance.get(`/connections/status/${user._id}`),
-    });
+  // const HandleAccept = async () => {
+  //   try {
+  //     const response = await fireApi(
+  //       `/connections/accept/${user._id}`,
+  //       "PUT"
+  //     );
+  //     toast.success(response.message || "Connection accepted");
+  //     getSugestion();
+  //   } catch (error) {
+  //     console.error("Error in acceptConnection:", error);
+  //     toast.error(error.message || "Failed to accept connection");
+  //   }
+  // };
 
-    const { mutate: sendConnectionRequest } = useMutation({
-        mutationFn: (userId) => axiosInstance.post(`/connections/request/${userId}`),
-        onSuccess: () => {
-            toast.success("Connection request sent successfully");
-            queryClient.invalidateQueries({ queryKey: ["connectionStatus", user._id] });
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.error || "An error occurred");
-        },
-    });
+  // const HandleReject = async () => {
+  //   try {
+  //     const response = await fireApi(
+  //       `/connections/reject/${user._id}`,
+  //       "PUT"
+  //     );
+  //     toast.success(response.message || "Connection rejected");
+  //     getSugestion();
+  //   } catch (error) {
+  //     console.error("Error in rejectConnection:", error);
+  //     toast.error(error.message || "Failed to reject connection");
+  //   }
+  // };
 
-    const { mutate: acceptRequest } = useMutation({
-        mutationFn: (requestId) => axiosInstance.put(`/connections/accept/${requestId}`),
-        onSuccess: () => {
-            toast.success("Connection request accepted");
-            queryClient.invalidateQueries({ queryKey: ["connectionStatus", user._id] });
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.error || "An error occurred");
-        },
-    });
+  const handlerequests = async () => {
+    try {
+      const response = await fireApi(
+        `/connections/requests`,
+        "GET"
+      );
+      console.log(response, "requests response");
+      // setIsConnected(response.status);
+    } catch (error) {
+      console.error("Error in handleRequests:", error);
+      toast.error(error.message || "Failed to fetch requests");
+    }
+  }
 
-    const { mutate: rejectRequest } = useMutation({
-        mutationFn: (requestId) => axiosInstance.put(`/connections/reject/${requestId}`),
-        onSuccess: () => {
-            toast.success("Connection request rejected");
-            queryClient.invalidateQueries({ queryKey: ["connectionStatus", user._id] });
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.error || "An error occurred");
-        },
-    });
+  React.useEffect(() => {
+    setIsConnected(user.status);
+    handlerequests();
+  }, [user.status]);
 
-    const handleConnect = () => {
-        if (connectionStatus?.data?.status === "not_connected") {
-            sendConnectionRequest(user._id);
-        }
-    };
-
-    const renderButton = () => {
-        if (isLoading) {
-            return (
-                <button className="px-4 py-2 rounded-md bg-gray-100 text-gray-500 text-sm font-medium" disabled>
-                    Loading...
-                </button>
-            );
-        }
-
-        switch (connectionStatus?.data?.status) {
-            case "pending":
-                return (
-                    <button
-                        className="px-4 py-2 rounded-md bg-amber-50 text-amber-600 text-sm font-medium flex items-center"
-                        disabled
-                    >
-                        <Clock size={16} className="mr-2" />
-                        Pending
-                    </button>
-                );
-            case "received":
-                return (
-                    <div className="flex gap-2 ">
-                        <button
-                            onClick={() => acceptRequest(connectionStatus.data.requestId)}
-                            className="px-3 py-2 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition duration-200"
-                            title="Accept Request"
-                        >
-                            <Check size={16} />
-                        </button>
-                        <button
-                            onClick={() => rejectRequest(connectionStatus.data.requestId)}
-                            className="px-3 py-2 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition duration-200"
-                            title="Reject Request"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
-                );
-            case "connected":
-                return (
-                    <button
-                        className="px-4 py-2 rounded-md bg-emerald-50 text-emerald-600 text-sm font-medium flex items-center"
-                        disabled
-                    >
-                        <UserCheck size={16} className="mr-2" />
-                        Connected
-                    </button>
-                );
-            default:
-                return (
-                    <button
-                        className="px-4 py-2 rounded-md border border-blue-500 text-blue-600 hover:bg-blue-50 transition duration-200 text-sm font-medium flex items-center"
-                        onClick={handleConnect}
-                    >
-                        <UserPlus size={16} className="mr-2" />
-                        Connect
-                    </button>
-                );
-        }
-    };
-
-    return (
-    //     <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 w-full max-w-md">
-    //     <Link to={`/profile/${user.username}`} className="flex items-center flex-grow space-x-4 min-w-0">
-    //         <img
-    //             src={user.profilePicture || "/avatar.png"}
-    //             alt={user.name}
-    //             className="w-12 h-12 rounded-full object-cover border border-gray-200"
-    //         />
-    //         <div className="flex-1 min-w-0">
-    //             <h3 className="font-semibold text-gray-900 truncate">
-    //                 {user.name}
-    //             </h3>
-    //             <p className="text-sm text-gray-500 truncate">{user.headline}</p>
-    //         </div>
-    //     </Link>
-    //     <div className="flex-shrink-0 ml-2">{renderButton()}</div>
-    // </div>
-    <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 w-full max-w-2xl">
-    <Link to={`/profile/${user.username}`} className="flex items-center flex-grow space-x-4 min-w-0">
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <Link
+        to={`/profile/${user.username}`}
+        className="flex items-center flex-grow"
+      >
         <img
-            src={user.profilePicture || "/avatar.png"}
-            alt={user.name}
-            className="w-12 h-12 rounded-full object-cover border border-gray-200"
+          src={user.profilePicture || "/avatar.png"}
+          alt={user.name}
+          className="w-12 h-12 rounded-full mr-3"
         />
-        <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 ">
-                {user.name}
-            </h3>
-            <p className="text-sm text-gray-500 ">{user.headline}</p>
+        <div>
+          <h3 className="font-semibold text-sm">{user.name}</h3>
+          <p className="text-xs text-info">{user.headline}</p>
         </div>
-    </Link>
-    <div className="flex-shrink-0 ml-2">{renderButton()}</div>
-</div>
-    );
+      </Link>
+      {isConnected === "received" ? (
+        <div className="flex gap-2">
+          <Link to={'/network'} className="px-3 py-1 rounded-full text-sm text-green-600 border border-green-600 cursor-pointer">
+          Accept Request
+          </Link>
+        </div>
+      ) : (
+        <button
+          className={`px-3 py-1 rounded-full text-sm text-white cursor-pointer ${
+            isConnected === "not_connected"
+              ? "bg-[#0a66c2]"
+              : isConnected === "pending"
+              ? "bg-gray-300 text-black"
+              : "bg-gray-500"
+          }`}
+          onClick={HandleConnect}
+        >
+          {isConnected === "not_connected"
+            ? "Connect"
+            : isConnected === "pending"
+            ? "Pending"
+            : "Connected"}
+        </button>
+      )}
+    </div>
+  );
 };
 
 export default RecommendedUser;

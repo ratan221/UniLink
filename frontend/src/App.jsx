@@ -1,52 +1,79 @@
+import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout";
+import AdminLayout from "./components/layout/AdminLayout";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
-import toast, { Toaster } from "react-hot-toast";
-import { useQuery } from "@tanstack/react-query";
-import { axiosInstance } from "./lib/axios";
 import NotificationsPage from "./pages/NotificationsPage";
 import NetworkPage from "./pages/NetworkPage";
 import PostPage from "./pages/PostPage";
 import ProfilePage from "./pages/ProfilePage";
-import ProtectedRoute from "./components/ProtectedRoute";
-
+import GuestRoute from "./components/routes/GuestRoute";
+import AuthRoute from "./components/routes/AuthRoute";
+import { Toaster } from "react-hot-toast";
+import Home from "./pages/admin/Home";
+import CertificatesApproval from "./pages/admin/CertificatesApproval";
+import UserProvider from "./providers/userProvider";
+import Profile from "./pages/admin/Profile";
+import Events from "./pages/Events";
+import Analytics from "./pages/admin/Analytics";
+import Loading from "./utils/LoaderUtils";
+import SkillsApproval from "./pages/admin/SkillsApproval";
+import MyConnections from "./pages/admin/MyConnections";
 
 function App() {
-	const { data: authUser, isLoading } = useQuery({
-		queryKey: ["authUser"],
-		queryFn: async () => {
-			try {
-				const res = await axiosInstance.get("/auth/me");
-				return res.data;
-			} catch (err) {
-				if (err.response?.status === 401) return null;
-				toast.error(err.response?.data?.message || "Something went wrong");
-				return null;
-			}
-		},
-	});
+  const [isAppLoading, setIsAppLoading] = useState(true);
 
-	if (isLoading) return <div>Loading...</div>;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsAppLoading(false);
+    }, 500); 
 
-	return (
-		<Layout>
-			<Routes>
-				<Route path='/' element={authUser ? <HomePage /> : <Navigate to="/login" />} />
-				<Route path='/signup' element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
-				<Route path='/login' element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
-				<Route path='/notifications' element={<ProtectedRoute authUser={authUser}><NotificationsPage /></ProtectedRoute>} />
-				<Route path='/network' element={<ProtectedRoute authUser={authUser}><NetworkPage /></ProtectedRoute>} />
-				<Route path='/post/:postId' element={<ProtectedRoute authUser={authUser}><PostPage /></ProtectedRoute>} />
-				<Route path='/profile/:username' element={<ProtectedRoute authUser={authUser}><ProfilePage /></ProtectedRoute>} />
+    return () => clearTimeout(timer);
+  }, []);
 
-				{/* ✅ Add Chat Route (Only accessible if logged in) */}
-				{/* <Route path='/chat' element={<ProtectedRoute authUser={authUser}><ChatComponent /></ProtectedRoute>} /> */}
-			</Routes>
-			<Toaster />
-		</Layout>
-	);
+  if (isAppLoading) return <Loading />;
+
+  return (
+    <UserProvider>
+      <Routes>
+        {/* Guest Routes */}
+        <Route element={<GuestRoute />}>
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
+
+        {/* Authenticated User Routes */}
+        <Route element={<Layout />}>
+          <Route element={<AuthRoute />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/network" element={<NetworkPage />} />
+            <Route path="/post/:id" element={<PostPage />} />
+            <Route path="/profile/:username" element={<ProfilePage />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="all-connections" element={<MyConnections />} />
+          </Route>
+        </Route>
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="home" replace />} />
+          <Route path="home" element={<Home />} />
+          <Route path="certifications-approval" element={<CertificatesApproval />} />
+          <Route path="skills-approval" element={<SkillsApproval />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
+
+      <Toaster />
+    </UserProvider>
+  );
 }
 
 export default App;

@@ -1,11 +1,18 @@
-import { Briefcase, X, Pencil } from "lucide-react";
-import { useState } from "react";
+import { Briefcase } from "lucide-react";
+import { useContext, useEffect, useState } from "react";
 import { formatDate } from "../utils/dateUtils";
+import { fireApi } from "../utils/useFire";
+import toast from "react-hot-toast";
+import { useParams } from "react-router-dom";
+import ProfileContext from "../context/profileContext";
 
-const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [experiences, setExperiences] = useState(userData.experience || []);
-  const [newExperience, setNewExperience] = useState({
+const ExperienceSection = ({ userData, GetUserProfile }) => {
+  const { user } = useContext(ProfileContext);
+  const isOwnProfile = user?.username === userData?.username;
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [experiences, setExperiences] = useState([]);
+  const [formData, setFormData] = useState({
     title: "",
     company: "",
     startDate: "",
@@ -13,145 +20,220 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
     description: "",
     currentlyWorking: false,
   });
-
-  const handleAddOrSave = () => {
-    let updatedExperiences = [...experiences];
-
-    // Check if user has entered a new experience
-    if (newExperience.title && newExperience.company && newExperience.startDate) {
-      updatedExperiences = [...updatedExperiences, newExperience];
-
-      // Reset the input fields
-      setNewExperience({
-        title: "",
-        company: "",
-        startDate: "",
-        endDate: "",
-        description: "",
-        currentlyWorking: false,
-      });
+  const [editingId, setEditingId] = useState(null);
+  const { username } = useParams();
+  useEffect(() => {
+    if (userData?.experience) {
+      setExperiences(userData.experience);
     }
+  }, [userData]);
 
-    // Update the state & save to backend
-    setExperiences(updatedExperiences);
-    onSave({ experience: updatedExperiences });
-
-    // Exit edit mode
-    setIsEditing(false);
-  };
-
-  const handleDeleteExperience = (id) => {
-    const updatedExperiences = experiences.filter((exp) => exp._id !== id);
-    setExperiences(updatedExperiences);
-    onSave({ experience: updatedExperiences });
-  };
-
-  const handleCurrentlyWorkingChange = (e) => {
-    setNewExperience({
-      ...newExperience,
-      currentlyWorking: e.target.checked,
-      endDate: e.target.checked ? "" : newExperience.endDate,
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      company: "",
+      startDate: "",
+      endDate: "",
+      description: "",
+      currentlyWorking: false,
     });
   };
 
+  const handleAddExperience = async () => {
+    if (!formData.title || !formData.company || !formData.startDate) {
+      toast.error("Please fill required fields");
+      return;
+    }
+
+    try {
+      const res = await fireApi("/add-experience", "POST", formData);
+      toast.success(res?.message || "Experience added successfully");
+      setIsAdding(false);
+      resetForm();
+      GetUserProfile(username);
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message || "Failed to add experience");
+    }
+  };
+
+  const handleUpdateExperience = async () => {
+    try {
+      const res = await fireApi("/update-experience", "PUT", {
+        expId: editingId,
+        ...formData,
+      });
+      toast.success(res?.message || "Experience updated successfully");
+      setEditingId(null);
+      resetForm();
+      GetUserProfile(username);
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message || "Failed to update experience");
+    }
+  };
+
+  const handleCurrentlyWorkingChange = (e) => {
+    setFormData({
+      ...formData,
+      currentlyWorking: e.target.checked,
+      endDate: e.target.checked ? "" : formData.endDate,
+    });
+  };
+
+  const handleEditExperience = (exp) => {
+    setEditingId(exp._id);
+    setFormData({
+      title: exp.title,
+      company: exp.company,
+      startDate: exp.startDate,
+      endDate: exp.endDate || "",
+      description: exp.description,
+      currentlyWorking: !exp.endDate,
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setIsAdding(false);
+    resetForm();
+  };
+
   return (
-    <div className="bg-white shadow-md rounded-2xl p-6 mb-6 border border-gray-200">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex justify-between items-center">
-        Experience
-        {isOwnProfile && !isEditing && (
-          <button onClick={() => setIsEditing(true)} className="text-gray-500 hover:text-blue-600 transition">
-            <Pencil size={22} />
+    <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <h2 className="text-xl font-semibold mb-4">Experience</h2>
+
+      {experiences.length === 0 && !isAdding && !editingId && isOwnProfile && (
+        <div className="text-start py-4">
+          <p className="text-gray-500 mb-4">No experience added yet</p>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300"
+          >
+            Add Experience
           </button>
-        )}
-      </h2>
+        </div>
+      )}
 
       {experiences.map((exp) => (
-        <div key={exp._id} className="mb-4 p-4 border border-gray-200 rounded-xl flex justify-between items-start shadow-sm">
+        <div key={exp._id} className="mb-4 flex justify-between items-start">
           <div className="flex items-start">
-            <Briefcase size={22} className="mr-3 mt-1 text-gray-700" />
+            <Briefcase size={20} className="mr-2 mt-1" />
             <div>
-              <h3 className="font-semibold text-gray-900">{exp.title}</h3>
+              <h3 className="font-semibold">{exp.title}</h3>
               <p className="text-gray-600">{exp.company}</p>
               <p className="text-gray-500 text-sm">
-                {formatDate(exp.startDate)} - {exp.endDate ? formatDate(exp.endDate) : "Present"}
+                {formatDate(exp.startDate)} -{" "}
+                {exp.endDate ? formatDate(exp.endDate) : "Present"}
               </p>
               <p className="text-gray-700">{exp.description}</p>
             </div>
           </div>
-          {isEditing && (
-            <button onClick={() => handleDeleteExperience(exp._id)} className="text-red-500 hover:text-red-700 transition">
-              <X size={22} />
+          {isOwnProfile && !editingId && (
+            <button
+              onClick={() => handleEditExperience(exp)}
+              className="text-primary hover:text-primary-dark"
+            >
+              Edit
             </button>
           )}
         </div>
       ))}
 
-      {isEditing && (
-        <div className="mt-4">
+      {isOwnProfile && (isAdding || editingId) && (
+        <div className="mt-4 border-t pt-4">
+          <h3 className="font-semibold mb-2">
+            {editingId ? "Edit Experience" : "Add New Experience"}
+          </h3>
+
           <input
             type="text"
-            placeholder="Title"
-            value={newExperience.title}
-            onChange={(e) => setNewExperience({ ...newExperience, title: e.target.value })}
-            className="w-full p-3 border bg-white border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition mb-2"
+            placeholder="Title*"
+            value={formData.title}
+            onChange={(e) =>
+              setFormData({ ...formData, title: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
+            required
           />
           <input
             type="text"
-            placeholder="Company"
-            value={newExperience.company}
-            onChange={(e) => setNewExperience({ ...newExperience, company: e.target.value })}
-            className="w-full p-3 border bg-white border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition mb-2"
+            placeholder="Company*"
+            value={formData.company}
+            onChange={(e) =>
+              setFormData({ ...formData, company: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
+            required
           />
           <input
             type="date"
-            value={newExperience.startDate}
-            onChange={(e) => setNewExperience({ ...newExperience, startDate: e.target.value })}
-            className="w-full p-3 border bg-white border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition mb-2"
+            placeholder="Start Date*"
+            value={formData.startDate}
+            onChange={(e) =>
+              setFormData({ ...formData, startDate: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
+            required
           />
           <div className="flex items-center mb-2">
             <input
               type="checkbox"
               id="currentlyWorking"
-              checked={newExperience.currentlyWorking}
+              checked={formData.currentlyWorking}
               onChange={handleCurrentlyWorkingChange}
               className="mr-2"
             />
-            <label htmlFor="currentlyWorking" className="text-gray-700">
-              I currently work here
-            </label>
+            <label htmlFor="currentlyWorking">I currently work here</label>
           </div>
-          {!newExperience.currentlyWorking && (
+          {!formData.currentlyWorking && (
             <input
               type="date"
-              value={newExperience.endDate}
-              onChange={(e) => setNewExperience({ ...newExperience, endDate: e.target.value })}
-              className="w-full p-3 border bg-white border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition mb-2"
+              placeholder="End Date"
+              value={formData.endDate}
+              onChange={(e) =>
+                setFormData({ ...formData, endDate: e.target.value })
+              }
+              className="w-full p-2 border rounded mb-2"
             />
           )}
           <textarea
             placeholder="Description"
-            value={newExperience.description}
-            onChange={(e) => setNewExperience({ ...newExperience, description: e.target.value })}
-            className="w-full p-3 border bg-white border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition mb-2"
-            rows="4"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            className="w-full p-2 border rounded mb-2"
           />
-
-          <div className="flex justify-end gap-3 mt-3">
+          <div className="flex gap-2">
             <button
-              onClick={() => setIsEditing(false)}
-              className="px-4 py-2 text-gray-600 bg-gray-200 rounded-xl hover:bg-gray-300 transition"
+              onClick={editingId ? handleUpdateExperience : handleAddExperience}
+              className="bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300"
             >
-              Cancel
+              {editingId ? "Update Experience" : "Add Experience"}
             </button>
             <button
-              onClick={handleAddOrSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition"
+              onClick={handleCancel}
+              className="bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 transition duration-300"
             >
-              {newExperience.title || newExperience.company || newExperience.startDate ? "Add Experience" : "Save Changes"}
+              Cancel
             </button>
           </div>
         </div>
       )}
+
+      {isOwnProfile ? (
+        !isAdding && !editingId ? (
+          experiences.length > 0 ? (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="mt-4 bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300"
+            >
+              Add New Experience
+            </button>
+          ) : null
+        ) : null
+      ) : null}
     </div>
   );
 };

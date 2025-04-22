@@ -1,65 +1,100 @@
 import { Link } from "react-router-dom";
-import { Home, UserPlus, Bell } from "lucide-react";
+import { Home, UserPlus, Bell, Calendar, BadgeCheck } from "lucide-react";
+import { useContext } from "react";
+import ProfileContext from "../context/profileContext";
 
-export default function Sidebar({ user }) {
-    return (
-        <div className='bg-white shadow-lg rounded-xl overflow-hidden'>
-            <div className='relative'>
-                <div
-                    className='h-20 bg-cover bg-center'
-                    style={{ backgroundImage: `url("${user.bannerImg || "/banner.png"}")` }}
-                />
-                <div className='flex flex-col items-center mt-[-40px]'>
-                    <Link to={`/profile/${user.username}`}>
-                        <img
-                            src={user.profilePicture || "/avatar.png"}
-                            alt={user.name}
-                            className='w-24 h-24 rounded-full border-4 border-white shadow-lg'
-                        />
-                    </Link>
-                    <h2 className='text-lg font-semibold mt-2 text-gray-900'>{user.name}</h2>
-                    <p className='text-sm text-gray-500'>{user.headline}</p>
-                    <p className='text-xs text-gray-400'>{user.connections.length} connections</p>
-                </div>
-            </div>
-            <div className='mt-4 px-6 py-4'>
-                <nav>
-                    <ul className='space-y-3'>
-                        <li>
-                            <Link
-                                to='/'
-                                className='flex items-center py-2 px-4 rounded-lg text-gray-700 hover:bg-blue-100 transition-colors'
-                            >
-                                <Home className='mr-3 text-blue-500' size={22} /> Home
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                to='/network'
-                                className='flex items-center py-2 px-4 rounded-lg text-gray-700 hover:bg-blue-100 transition-colors'
-                            >
-                                <UserPlus className='mr-3 text-blue-500' size={22} /> My Network
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                to='/notifications'
-                                className='flex items-center py-2 px-4 rounded-lg text-gray-700 hover:bg-blue-100 transition-colors'
-                            >
-                                <Bell className='mr-3 text-blue-500' size={22} /> Notifications
-                            </Link>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-            <div className='border-t border-gray-200 px-6 py-4 text-center'>
-                <Link
-                    to={`/profile/${user.username}`}
-                    className='text-sm font-semibold text-blue-600 hover:underline'
-                >
-                    Visit your profile
-                </Link>
-            </div>
-        </div>
-    );
+export default function Sidebar() {
+
+  const { user } = useContext(ProfileContext);
+  
+  return (
+    <div className="bg-secondary rounded-lg shadow">
+      <div className="p-4 text-center">
+        <div
+          className="h-16 rounded-t-lg bg-cover bg-center"
+          style={{
+            backgroundImage: "url('/banner.png')",
+          }}
+        />
+        <Link to={`/profile/${user?.username}`} className="block">
+          <img
+            src={user?.profilePicture || "/avatar.png"}
+            alt={user?.name || "User"}
+            className="w-20 h-20 rounded-full mx-auto mt-[-40px] border-4 border-white"
+          />
+          <h2 className="text-xl font-semibold mt-2 inline-flex items-center justify-center gap-1 mx-auto">
+            {user?.name}
+          </h2>
+          {user?.isVerified === true && (
+            <p className="justify-center flex text-gray-400">
+              Account Verified
+              <BadgeCheck className=" ml-2 w-5 h-5 text-blue-500" />
+            </p>
+          )}
+        </Link>
+        <p className="text-gray-600 mt-1">{user?.headline}</p>{" "}
+        <p className="text-gray-500 text-xs mt-1">
+          {" "}
+          {user?.connections?.length || 0} connections
+        </p>
+        <Link to="/all-connections" >
+        <p className="text-primary text-xs mt-1">View all connections</p>
+        </Link>
+      </div>
+      <div className="border-t border-base-100 p-4">
+        <nav>
+          <ul className="space-y-2">
+            <li>
+              <Link
+                to="/"
+                className="flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors"
+              >
+                <Home className="mr-2" size={20} /> Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/network"
+                className="flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors"
+              >
+                <UserPlus className="mr-2" size={20} /> My Network
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/events"
+                className="flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors"
+              >
+                <Calendar className="mr-2" size={20} /> Events
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/analytics"
+                className="flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors"
+              >
+                <Calendar className="mr-2" size={20} /> Analytics
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/notifications"
+                className="flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors"
+              >
+                <Bell className="mr-2" size={20} /> Notifications
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <div className="border-t border-base-100 p-4">
+        <Link
+          to={`/profile/${user?.username}`}
+          className="text-sm font-semibold"
+        >
+          Visit your profile
+        </Link>
+      </div>
+    </div>
+  );
 }

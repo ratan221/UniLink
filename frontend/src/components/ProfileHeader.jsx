@@ -1,472 +1,360 @@
-// import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-// import { useMemo, useState } from "react";
-// import { axiosInstance } from "../lib/axios";
-// import { toast } from "react-hot-toast";
-// import EditProfilePopup from "./EditProfilePopup";
-
-// import { Camera, Clock, MapPin, UserCheck, UserPlus, X } from "lucide-react";
-
-// const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
-// 	const [isEditing, setIsEditing] = useState(false);
-// 	const [editedData, setEditedData] = useState({});
-// 	const queryClient = useQueryClient();
-
-// 	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
-
-// 	const { data: connectionStatus, refetch: refetchConnectionStatus } = useQuery({
-// 		queryKey: ["connectionStatus", userData._id],
-// 		queryFn: () => axiosInstance.get(`/connections/status/${userData._id}`),
-// 		enabled: !isOwnProfile,
-// 	});
-
-// 	const isConnected = userData.connections.some((connection) => connection === authUser._id);
-
-// 	const { mutate: sendConnectionRequest } = useMutation({
-// 		mutationFn: (userId) => axiosInstance.post(`/connections/request/${userId}`),
-// 		onSuccess: () => {
-// 			toast.success("Connection request sent");
-// 			refetchConnectionStatus();
-// 			queryClient.invalidateQueries(["connectionRequests"]);
-// 		},
-// 		onError: (error) => {
-// 			toast.error(error.response?.data?.message || "An error occurred");
-// 		},
-// 	});
-
-// 	const { mutate: acceptRequest } = useMutation({
-// 		mutationFn: (requestId) => axiosInstance.put(`/connections/accept/${requestId}`),
-// 		onSuccess: () => {
-// 			toast.success("Connection request accepted");
-// 			refetchConnectionStatus();
-// 			queryClient.invalidateQueries(["connectionRequests"]);
-// 		},
-// 		onError: (error) => {
-// 			toast.error(error.response?.data?.message || "An error occurred");
-// 		},
-// 	});
-
-// 	const { mutate: rejectRequest } = useMutation({
-// 		mutationFn: (requestId) => axiosInstance.put(`/connections/reject/${requestId}`),
-// 		onSuccess: () => {
-// 			toast.success("Connection request rejected");
-// 			refetchConnectionStatus();
-// 			queryClient.invalidateQueries(["connectionRequests"]);
-// 		},
-// 		onError: (error) => {
-// 			toast.error(error.response?.data?.message || "An error occurred");
-// 		},
-// 	});
-
-// 	const { mutate: removeConnection } = useMutation({
-// 		mutationFn: (userId) => axiosInstance.delete(`/connections/${userId}`),
-// 		onSuccess: () => {
-// 			toast.success("Connection removed");
-// 			refetchConnectionStatus();
-// 			queryClient.invalidateQueries(["connectionRequests"]);
-// 		},
-// 		onError: (error) => {
-// 			toast.error(error.response?.data?.message || "An error occurred");
-// 		},
-// 	});
-
-// 	const getConnectionStatus = useMemo(() => {
-// 		if (isConnected) return "connected";
-// 		if (!isConnected) return "not_connected";
-// 		return connectionStatus?.data?.status;
-// 	}, [isConnected, connectionStatus]);
-
-// 	const renderConnectionButton = () => {
-// 		const baseClass = "text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center";
-// 		switch (getConnectionStatus) {
-// 			case "connected":
-// 				return (
-// 					<div className='flex gap-2 justify-center'>
-// 						<div className={`${baseClass} bg-green-500 hover:bg-green-600`}>
-// 							<UserCheck size={20} className='mr-2' />
-// 							Connected
-// 						</div>
-// 						<button
-// 							className={`${baseClass} bg-red-500 hover:bg-red-600 text-sm`}
-// 							onClick={() => removeConnection(userData._id)}
-// 						>
-// 							<X size={20} className='mr-2' />
-// 							Remove Connection
-// 						</button>
-// 					</div>
-// 				);
-
-// 			case "pending":
-// 				return (
-// 					<button className={`${baseClass} bg-yellow-500 hover:bg-yellow-600`}>
-// 						<Clock size={20} className='mr-2' />
-// 						Pending
-// 					</button>
-// 				);
-
-// 			case "received":
-// 				return (
-// 					<div className='flex gap-2 justify-center'>
-// 						<button
-// 							onClick={() => acceptRequest(connectionStatus.data.requestId)}
-// 							className={`${baseClass} bg-green-500 hover:bg-green-600`}
-// 						>
-// 							Accept
-// 						</button>
-// 						<button
-// 							onClick={() => rejectRequest(connectionStatus.data.requestId)}
-// 							className={`${baseClass} bg-red-500 hover:bg-red-600`}
-// 						>
-// 							Reject
-// 						</button>
-// 					</div>
-// 				);
-// 			default:
-// 				return (
-// 					<button
-// 						onClick={() => sendConnectionRequest(userData._id)}
-// 						className='bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center'
-// 					>
-// 						<UserPlus size={20} className='mr-2' />
-// 						Connect
-// 					</button>
-// 				);
-// 		}
-// 	};
-
-// 	const handleImageChange = (event) => {
-// 		const file = event.target.files[0];
-// 		if (file) {
-// 			const reader = new FileReader();
-// 			reader.onloadend = () => {
-// 				setEditedData((prev) => ({ ...prev, [event.target.name]: reader.result }));
-// 			};
-// 			reader.readAsDataURL(file);
-// 		}
-// 	};
-
-// 	const handleSave = () => {
-// 		onSave(editedData);
-// 		setIsEditing(false);
-// 	};
-
-// 	return (
-// 		<div className='bg-white shadow rounded-lg mb-6'>
-// 			<div
-// 				className='relative h-48 rounded-t-lg bg-cover bg-center'
-// 				style={{
-// 					backgroundImage: `url('${editedData.bannerImg || userData.bannerImg || "/banner.png"}')`,
-// 				}}
-// 			>
-// 				{isEditing && (
-// 					<label className='absolute top-2 right-2 bg-white p-2 rounded-full shadow cursor-pointer'>
-// 						<Camera size={20} />
-// 						<input
-// 							type='file'
-// 							className='hidden'
-// 							name='bannerImg'
-// 							onChange={handleImageChange}
-// 							accept='image/*'
-// 						/>
-// 					</label>
-// 				)}
-// 			</div>
-
-// 			<div className='p-4'>
-// 				<div className='relative -mt-20 mb-4'>
-// 					<img
-// 						className='w-32 h-32 rounded-full mx-auto object-cover'
-// 						src={editedData.profilePicture || userData.profilePicture || "/avatar.png"}
-// 						alt={userData.name}
-// 					/>
-
-// 					{isEditing && (
-// 						<label className='absolute bottom-0 right-1/2 transform translate-x-16 bg-white p-2 rounded-full shadow cursor-pointer'>
-// 							<Camera size={20} />
-// 							<input
-// 								type='file'
-// 								className='hidden'
-// 								name='profilePicture'
-// 								onChange={handleImageChange}
-// 								accept='image/*'
-// 							/>
-// 						</label>
-// 					)}
-// 				</div>
-
-// 				<div className="text-center mb-6">
-// 	{isEditing ? (
-// 		<input
-// 			type="text"
-// 			value={editedData.name ?? userData.name}
-// 			onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
-// 			className="text-3xl font-bold mb-2 text-center w-full bg-white text-black border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-// 			placeholder="Enter your name"
-// 		/>
-// 	) : (
-// 		<h1 className="text-3xl font-semibold text-gray-900">{userData.name}</h1>
-// 	)}
-
-// 	{isEditing ? (
-// 		<input
-// 			type="text"
-// 			value={editedData.headline ?? userData.headline}
-// 			onChange={(e) => setEditedData({ ...editedData, headline: e.target.value })}
-// 			className="text-lg text-gray-800 text-center w-full bg-white border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-// 			placeholder="Enter your headline"
-// 		/>
-// 	) : (
-// 		<p className="text-lg text-gray-600 mt-1">{userData.headline}</p>
-// 	)}
-
-// 	<div className="flex justify-center items-center gap-2 mt-3 text-gray-500">
-// 		<MapPin size={18} />
-// 		{isEditing ? (
-// 			<input
-// 				type="text"
-// 				value={editedData.location ?? userData.location}
-// 				onChange={(e) => setEditedData({ ...editedData, location: e.target.value })}
-// 				className="text-base text-black text-center w-auto bg-white border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-// 				placeholder="Enter your location"
-// 			/>
-// 		) : (
-// 			<span className="text-base">{userData.location}</span>
-// 		)}
-// 	</div>
-// </div>
-
-
-// 				{isOwnProfile ? (
-// 					isEditing ? (
-// 						<button
-// 							className='w-full bg-primary text-white py-2 px-4 rounded-full hover:bg-primary-dark
-// 							 transition duration-300'
-// 							onClick={handleSave}
-// 						>
-// 							Save Profile
-// 						</button>
-// 					) : (
-// 						<button
-// 							onClick={() => setIsEditing(true)}
-// 							className='w-full bg-primary text-white py-2 px-4 rounded-full hover:bg-primary-dark
-// 							 transition duration-300'
-// 						>
-// 							Edit Profile
-// 						</button>
-// 					)
-// 				) : (
-// 					<div className='flex justify-center'>{renderConnectionButton()}</div>
-// 				)}
-// 			</div>
-// 		</div>
-// 	);
-// };
-// export default ProfileHeader;
-
-
-
-
-
-
-
-
-//-----------------------------------------------------------------------------------------//
-
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { axiosInstance } from "../lib/axios";
+import { useContext, useState, useRef } from "react";
 import { toast } from "react-hot-toast";
-import EditProfilePopup from "./EditProfilePopup";
-import { Clock, MapPin, UserCheck, UserPlus, X, Pencil } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { fireApi } from "../utils/useFire";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  Button,
+  IconButton,
+  Avatar,
+  Box,
+  Divider,
+} from "@mui/material";
+import { CameraAlt, Close } from "@mui/icons-material";
+import ProfileContext from "../context/profileContext";
+import { Link, useParams } from "react-router-dom";
 
-const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
-    const [showEditPopup, setShowEditPopup] = useState(false);
-    const queryClient = useQueryClient();
+const ProfileHeader = ({ userData, GetUserProfile }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user } = useContext(ProfileContext);
+  const profilePicInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
+  const isOwnProfile = user?.username === userData?.username;
+  const { username } = useParams();
 
-    const { data: authUser } = useQuery({
-        queryKey: ["authUser"],
-        queryFn: () => axiosInstance.get("/auth/user").then((res) => res.data), // Provide the API call
-    });
+  const [formData, setFormData] = useState({
+    bannerImg: userData?.bannerImg || "",
+    profilePicture: userData?.profilePicture || "",
+    name: userData?.name || "",
+    username: userData?.username || "",
+    headline: userData?.headline || "",
+    about: userData?.about || "",
+    location: userData?.location || "",
+  });
 
-    const { data: connectionStatus, refetch: refetchConnectionStatus } = useQuery({
-        queryKey: ["connectionStatus", userData._id],
-        queryFn: () => axiosInstance.get(`/connections/status/${userData._id}`),
-        enabled: !isOwnProfile,
-    });
+  const [preview, setPreview] = useState({
+    profilePicture: userData?.profilePicture || "",
+    bannerImg: userData?.bannerImg || ""
+  });
 
-    const isConnected = userData.connections.some((connection) => connection === authUser._id);
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(prev => ({
+          ...prev,
+          [event.target.name]: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+      setFormData(prev => ({ ...prev, [event.target.name]: file }));
+    }
+    // updateProfile();
+    event.target.value = ""; 
+  };
 
-    // Connection mutations
-    const { mutate: sendConnectionRequest } = useMutation({
-        mutationFn: (userId) => axiosInstance.post(`/connections/request/${userId}`),
-        onSuccess: () => {
-            toast.success("Connection request sent");
-            refetchConnectionStatus();
-            queryClient.invalidateQueries(["connectionRequests"]);
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.message || "An error occurred");
-        },
-    });
+  const removeImage = (type) => {
+    setPreview(prev => ({ ...prev, [type]: "" }));
+    setFormData(prev => ({ ...prev, [type]: "" }));
+  };
 
-    const { mutate: acceptRequest } = useMutation({
-        mutationFn: (requestId) => axiosInstance.put(`/connections/accept/${requestId}`),
-        onSuccess: () => {
-            toast.success("Connection request accepted");
-            refetchConnectionStatus();
-            queryClient.invalidateQueries(["connectionRequests"]);
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.message || "An error occurred");
-        },
-    });
+  const updateProfile = async () => {
+    try {
+      const formDataToSend = new FormData();
+      
+      // Append text fields
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('username', formData.username);
+      formDataToSend.append('headline', formData.headline);
+      formDataToSend.append('about', formData.about);
+      formDataToSend.append('location', formData.location);
+      
+      // Append files if they exist
+      if (formData.profilePicture instanceof File) {
+        formDataToSend.append('profilePicture', formData.profilePicture);
+      }
+      
+      if (formData.bannerImg instanceof File) {
+        formDataToSend.append('bannerImg', formData.bannerImg);
+      }
 
-    const { mutate: rejectRequest } = useMutation({
-        mutationFn: (requestId) => axiosInstance.put(`/connections/reject/${requestId}`),
-        onSuccess: () => {
-            toast.success("Connection request rejected");
-            refetchConnectionStatus();
-            queryClient.invalidateQueries(["connectionRequests"]);
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.message || "An error occurred");
-        },
-    });
-
-    const { mutate: removeConnection } = useMutation({
-        mutationFn: (userId) => axiosInstance.delete(`/connections/${userId}`),
-        onSuccess: () => {
-            toast.success("Connection removed");
-            refetchConnectionStatus();
-            queryClient.invalidateQueries(["connectionRequests"]);
-        },
-        onError: (error) => {
-            toast.error(error.response?.data?.message || "An error occurred");
-        },
-    });
-
-    const getConnectionStatus = useMemo(() => {
-        if (isConnected) return "connected";
-        if (!isConnected) return "not_connected";
-        return connectionStatus?.data?.status;
-    }, [isConnected, connectionStatus]);
-
-    const renderConnectionButton = () => {
-        const baseClass = "px-6 py-2.5 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2";
-        
-        switch (getConnectionStatus) {
-            case "connected":
-                return (
-                    <div className="flex gap-3">
-                        <button className={`${baseClass} bg-green-50 text-green-600`} disabled>
-                            <UserCheck size={20} />
-                            Connected
-                        </button>
-                        <button
-                            onClick={() => removeConnection(userData._id)}
-                            className={`${baseClass} bg-red-50 text-red-600 hover:bg-red-100`}
-                        >
-                            <X size={20} />
-                            Remove
-                        </button>
-                    </div>
-                );
-            case "pending":
-                return (
-                    <button className={`${baseClass} bg-amber-50 text-amber-600`} disabled>
-                        <Clock size={20} />
-                        Pending
-                    </button>
-                );
-            case "received":
-                return (
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => acceptRequest(connectionStatus.data.requestId)}
-                            className={`${baseClass} bg-green-50 text-green-600 hover:bg-green-100`}
-                        >
-                            Accept
-                        </button>
-                        <button
-                            onClick={() => rejectRequest(connectionStatus.data.requestId)}
-                            className={`${baseClass} bg-red-50 text-red-600 hover:bg-red-100`}
-                        >
-                            Reject
-                        </button>
-                    </div>
-                );
-            default:
-                return (
-                    <button
-                        onClick={() => sendConnectionRequest(userData._id)}
-                        className={`${baseClass} bg-blue-50 text-blue-600 hover:bg-blue-100`}
-                    >
-                        <UserPlus size={20} />
-                        Connect
-                    </button>
-                );
+      const response = await fireApi(
+        "/update-profile", 
+        "PUT", 
+        formDataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-    };
+      );
 
-    const handleSaveProfile = (editedData) => {
-        onSave(editedData);
-        setShowEditPopup(false);
-        toast.success("Profile updated successfully");
-    };
+      toast.success(response?.message || "Profile updated successfully");
+      GetUserProfile(username);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error in updateProfile:", error);
+      toast.error(error.message || "Something went wrong!");
+    }
+  };
 
-    return (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
-            {/* Banner */}
-            <div
-                className="h-48 bg-cover bg-center"
-                style={{
-                    backgroundImage: `url('${userData.bannerImg || "/banner.png"}')`
-                }}
+  const handleEditClick = () => {
+    setFormData({
+      bannerImg: userData?.bannerImg || "",
+      profilePicture: userData?.profilePicture || "",
+      name: userData?.name || "",
+      username: userData?.username || "",
+      headline: userData?.headline || "",
+      about: userData?.about || "",
+      location: userData?.location || "",
+    });
+    setPreview({
+      profilePicture: userData?.profilePicture || "",
+      bannerImg: userData?.bannerImg || ""
+    });
+    setIsModalOpen(true);
+  };
+
+  return (
+    <div className="bg-white shadow rounded-lg mb-6">
+      {/* Banner with upload icon */}
+      <div className="relative h-48 rounded-t-lg bg-cover bg-center"
+        style={{ backgroundImage: `url('${preview.bannerImg || userData?.bannerImg || "/banner.png"}')` }}>
+        
+        {isOwnProfile && (
+          <div className="absolute top-2 right-2">
+            <IconButton 
+              onClick={() => bannerInputRef.current.click()}
+              sx={{ backgroundColor: 'white', '&:hover': { backgroundColor: 'white' } }}
+            >
+              <CameraAlt />
+            </IconButton>
+            <input
+              type="file"
+              ref={bannerInputRef}
+              style={{ display: "none" }}
+              name="bannerImg"
+              onChange={handleImageChange}
+              accept="image/*"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Profile picture with upload icon */}
+      <div className="p-4">
+        <div className="relative -mt-20 mb-4">
+          <div className="relative w-32 h-32 rounded-full mx-auto overflow-hidden border-4 border-white">
+            <img
+              className="w-full h-full object-cover"
+              src={preview.profilePicture || userData?.profilePicture || "/avatar.png"}
+              alt={userData?.name}
+            />
+            {isOwnProfile && (
+              <>
+                <div 
+                  className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center cursor-pointer transition-all duration-300"
+                  onClick={() => profilePicInputRef.current.click()}
+                >
+                  <CameraAlt sx={{ color: 'white', fontSize: 30, opacity: 0, transition: 'opacity 0.3s' }} className="hover:opacity-100" />
+                </div>
+                <input
+                  type="file"
+                  ref={profilePicInputRef}
+                  style={{ display: "none" }}
+                  name="profilePicture"
+                  onChange={handleImageChange}
+                  accept="image/*"
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* User info display */}
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-bold mb-2">{userData?.name}</h1>
+          <h1 className="text-gray-600">username: {userData?.username}</h1>
+          <p className="text-gray-600">Headline: {userData?.headline}</p>
+          <div className="flex justify-center items-center mt-2">
+            <MapPin size={16} className="text-gray-500 mr-1" />
+            <span className="text-gray-600">Location: {userData?.location}</span>
+          </div>
+          <Link to={`/all-connections`}>
+          <p className="text-blue-500 underline hover:cursor-pointer">View  Connections</p>
+          </Link>
+        </div>
+
+        {isOwnProfile && (
+          <button
+            onClick={handleEditClick}
+            className="w-full bg-primary text-white py-2 px-4 rounded-full hover:bg-primary-dark transition duration-300"
+          >
+            Edit Profile
+          </button>
+        )}
+      </div>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>
+          Edit Profile
+          <IconButton onClick={() => setIsModalOpen(false)} sx={{ position: "absolute", right: 8, top: 8 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Banner Image with preview and delete */}
+            <Box sx={{ mb: 2 }}>
+              <label htmlFor="bannerImg">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  fullWidth
+                  startIcon={<CameraAlt />}
+                >
+                  Upload Banner Image
+                </Button>
+                <input
+                  accept="image/*"
+                  id="bannerImg"
+                  type="file"
+                  style={{ display: "none" }}
+                  name="bannerImg"
+                  onChange={handleImageChange}
+                />
+              </label>
+              
+              {preview.bannerImg && (
+                <Box sx={{ mt: 2, position: 'relative' }}>
+                  <img 
+                    src={preview.bannerImg} 
+                    alt="Banner preview" 
+                    style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '4px' }} 
+                  />
+                  <IconButton
+                    onClick={() => removeImage('bannerImg')}
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 8, 
+                      right: 8, 
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+                    }}
+                  >
+                    <Close fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
+
+            {/* Profile Picture with preview and delete */}
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 2, flexDirection: 'column', alignItems: 'center' }}>
+              <label htmlFor="profilePicture">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<CameraAlt />}
+                >
+                  Upload Profile Picture
+                </Button>
+                <input
+                  accept="image/*"
+                  id="profilePicture"
+                  type="file"
+                  style={{ display: "none" }}
+                  name="profilePicture"
+                  onChange={handleImageChange}
+                />
+              </label>
+              
+              {preview.profilePicture && (
+                <Box sx={{ mt: 2, position: 'relative', width: '100px', height: '100px' }}>
+                  <Avatar
+                    src={preview.profilePicture}
+                    sx={{ width: '100%', height: '100%' }}
+                  />
+                  <IconButton
+                    onClick={() => removeImage('profilePicture')}
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 0, 
+                      right: 0, 
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+                      transform: 'translate(50%, -50%)'
+                    }}
+                  >
+                    <Close fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
+
+            {/* Other form fields */}
+            <TextField
+              label="Full Name"
+              name="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              fullWidth
+              variant="outlined"
             />
 
-            <div className="px-6 pb-6">
-                {/* Profile Picture */}
-                <div className="relative -mt-20 mb-4">
-                    <img
-                        src={userData.profilePicture || "/avatar.png"}
-                        alt={userData.name}
-                        className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover mx-auto"
-                    />
-                    {isOwnProfile && (
-                        <button
-                            onClick={() => setShowEditPopup(true)}
-                            className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition"
-                        >
-                            <Pencil size={20} className="text-gray-600 hover:text-blue-600 transition" />
-                        </button>
-                    )}
-                </div>
+            <TextField
+              label="Headline"
+              name="headline"
+              value={formData.headline}
+              onChange={(e) => setFormData(prev => ({ ...prev, headline: e.target.value }))}
+              fullWidth
+              variant="outlined"
+            />
 
-                {/* Profile Info */}
-                <div className="text-center space-y-3">
-                    <h1 className="text-2xl font-bold text-gray-900">{userData.name}</h1>
-                    <p className="text-lg text-gray-600">{userData.headline}</p>
-                    <div className="flex items-center justify-center text-gray-500 gap-2">
-                        <MapPin size={18} />
-                        <span>{userData.location}</span>
-                    </div>
-                </div>
+            <TextField
+              label="Location"
+              name="location"
+              value={formData.location}
+              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              fullWidth
+              variant="outlined"
+            />
 
-                {/* Action Button */}
-                <div className="mt-6 flex justify-center">
-                    {!isOwnProfile && renderConnectionButton()}
-                </div>
-            </div>
+            <Divider sx={{ my: 2 }} />
 
-            {/* Edit Profile Popup */}
-            {showEditPopup && (
-                <EditProfilePopup
-                    userData={userData}
-                    onSave={handleSaveProfile}
-                    onClose={() => setShowEditPopup(false)}
-                />
-            )}
-        </div>
-    );
+            <TextField
+              label="About"
+              name="about"
+              value={formData.about}
+              onChange={(e) => setFormData(prev => ({ ...prev, about: e.target.value }))}
+              fullWidth
+              multiline
+              rows={4}
+              variant="outlined"
+            />
+
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={updateProfile}
+                size="large"
+              >
+                Save Changes
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 };
 
 export default ProfileHeader;
